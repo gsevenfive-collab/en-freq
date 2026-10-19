@@ -333,7 +333,6 @@ tbody tr:active{background:rgba(91,157,255,.08)}
     <div class="chips">
       <button class="chip on" id="f-rich">精讲<span class="n" id="c-rich"></span></button>
       <button class="chip" id="f-all">全部<span class="n" id="c-all"></span></button>
-      <button class="chip" id="f-todo">未掌握<span class="n" id="c-todo"></span></button>
       <button class="chip" id="f-a">A 必背<span class="n" id="c-a"></span></button>
       <button class="chip" id="f-b">B 应认识<span class="n" id="c-b"></span></button>
       <button class="chip" id="f-c">C 可跳过<span class="n" id="c-c"></span></button>
@@ -406,6 +405,11 @@ tbody tr:active{background:rgba(91,157,255,.08)}
     <div id="qcard"></div>
   </section>
 
+  <!-- 已掌握 -->
+  <section id="view-mastered" class="view wrap" hidden style="padding-top:12px">
+    <div id="masteredbody"></div>
+  </section>
+
   <!-- 收藏 -->
   <section id="view-fav" class="view wrap" hidden style="padding-top:12px">
     <div id="favbody"></div>
@@ -433,6 +437,13 @@ tbody tr:active{background:rgba(91,157,255,.08)}
         <path d="M15.5 4.5l4 4L8 20H4v-4z"/><path d="M13.5 6.5l4 4"/>
       </svg>
       <span>填空</span>
+    </button>
+    <button class="navbtn" data-tab="mastered">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+      <span>已掌握</span>
+      <span class="badge" id="navmastered" hidden>0</span>
     </button>
     <button class="navbtn" data-tab="fav">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -564,8 +575,9 @@ function speak(text, rowEl, rate){
 /* ================= 单词 ================= */
 function visibleWords(){
   let rows = DATA;
+  /* 已掌握的词从所有浏览列表里隐去，只出现在「已掌握」页 */
+  if (tab !== 'mastered') rows = rows.filter(d => !mastered.has(d.w));
   if (filter === 'rich') rows = rows.filter(d => d.ipa);
-  else if (filter === 'todo') rows = rows.filter(d => !mastered.has(d.w));
   else if (filter === 'a') rows = rows.filter(d => d.lv === 'A');
   else if (filter === 'b') rows = rows.filter(d => d.lv === 'B');
   else if (filter === 'c') rows = rows.filter(d => d.lv === 'C');
@@ -601,7 +613,6 @@ function renderWords(){
   const richN = DATA.filter(d => d.ipa).length;
   $('c-rich').textContent = richN;
   $('c-all').textContent = DATA.length;
-  $('c-todo').textContent = DATA.length - mastered.size;
   $('c-a').textContent = DATA.filter(d => d.lv === 'A').length;
   $('c-b').textContent = DATA.filter(d => d.lv === 'B').length;
   $('c-c').textContent = DATA.filter(d => d.lv === 'C').length;
@@ -835,19 +846,41 @@ function updateFavBadge(){
   b.textContent = n > 99 ? '99+' : n;
 }
 
+/* ================= 已掌握 ================= */
+function renderMastered(){
+  const ws = [...mastered].map(w => DATA.find(d => d.w === w)).filter(Boolean).sort((a, b) => a.r - b.r);
+  const b = $('navmastered');
+  if (b){ b.hidden = ws.length === 0; b.textContent = ws.length > 99 ? '99+' : ws.length; }
+  const box = $('masteredbody');
+  if (!ws.length){
+    box.innerHTML = '<div class="empty"><span class="big">✓</span>还没有已掌握的词<br>单词右侧点 ☆ 就会收到这里</div>';
+    return;
+  }
+  box.innerHTML = `<div class="favsec"><h3>已掌握 <span class="cnt">${ws.length}</span> 词</h3>`
+    + ws.map(d => `<div class="fitem">
+        <div class="main"><div class="w">${esc(d.w)}</div>
+        <div class="m">${esc(d.cn)}</div></div>
+        <button class="spk" data-say="${esc(d.w)}">🔊</button>
+        <button class="spk spkw" data-say="${esc(d.w)}" data-rate="0.45">🐢</button>
+        <button class="mk on" data-mk="${esc(d.w)}">★</button>
+      </div>`).join('') + `</div>`;
+}
+
 /* ================= 视图切换 ================= */
-const RENDER = { words: renderWords, formula: renderFormula, blank: renderBlank, fav: renderFav };
+const RENDER = { words: renderWords, formula: renderFormula, blank: renderBlank,
+                 mastered: renderMastered, fav: renderFav };
+const TABS = ['words', 'formula', 'blank', 'mastered', 'fav'];
 
 function setTab(t){
   tab = t;
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  ['words', 'formula', 'blank', 'fav'].forEach(v => {
-    $('view-' + v).hidden = v !== t;
+  TABS.forEach(v => {
+    const view = $('view-' + v);
+    if (view) view.hidden = v !== t;
     const ctl = $('ctl-' + v);
     if (ctl) ctl.hidden = v !== t;
   });
-  if (tab === 'fav') renderFav();
-  else RENDER[tab]();
+  RENDER[tab]();
   updateFavBadge();
   window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
   if (history.replaceState) history.replaceState(null, '', '#' + t);
@@ -870,7 +903,11 @@ document.addEventListener('click', e => {
   if (mk){
     const w = mk.dataset.mk;
     mastered.has(w) ? mastered.delete(w) : mastered.add(w);
-    saveAll(); renderWords(); return;
+    saveAll();
+    if (tab === 'mastered') renderMastered();
+    else if (tab === 'words') renderWords();
+    else if (tab === 'fav') renderFav();
+    return;
   }
   const fv = t.closest('[data-fav]');
   if (fv){
@@ -918,13 +955,16 @@ document.addEventListener('click', e => {
 });
 
 /* 单词筛选 */
-const FILTERS = { 'f-all':'all', 'f-rich':'rich', 'f-todo':'todo', 'f-a':'a', 'f-b':'b', 'f-c':'c' };
+const FILTERS = { 'f-rich':'rich', 'f-all':'all', 'f-a':'a', 'f-b':'b', 'f-c':'c' };
 Object.keys(FILTERS).forEach(id => {
   const el = $(id);
   if (el) el.onclick = () => {
-    filter = FILTERS[id];
+    const want = FILTERS[id];
+    /* 再点一次已选中的筛选 -> 取消筛选，显示全部 */
+    filter = (filter === want && want !== 'all') ? 'all' : want;
     document.querySelectorAll('#ctl-words .chip').forEach(b => b.classList.remove('on'));
-    el.classList.add('on');
+    const on = Object.keys(FILTERS).find(k => FILTERS[k] === filter);
+    if (on && $(on)) $(on).classList.add('on');
     renderWords();
   };
 });
@@ -988,10 +1028,13 @@ function openSheet(){
       「设置 → 时间和语言 → 语音 → 添加语音」装本地英语语音。</span></div>
     <div class="kv"><span class="k">已掌握</span><span class="v">${mastered.size} 词</span></div>
     <div class="kv"><span class="k">已做题</span><span class="v">${Object.keys(quizRec).length} 道</span></div>
-    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:24</span></div>
+    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:40</span></div>
     <div class="act">
       <button id="voice-test">🔊 试听一句</button>
       <button id="sheet-close">关闭</button>
+    </div>
+    <div class="act">
+      <button id="reset-mastered">重置进度（清空已掌握）</button>
     </div>
     <div class="act">
       <button class="danger" id="reset-all">清空全部记录</button>
@@ -1007,6 +1050,12 @@ function openSheet(){
     speak('Hello. I am here. This is a test.', null, 0.9);
     vt.textContent = '正在播放…';
     setTimeout(() => { vt.textContent = '🔊 试听一句'; }, 2200);
+  };
+  const rm = div.querySelector('#reset-mastered');
+  if (rm) rm.onclick = () => {
+    if (confirm('重置进度？已掌握的词会回到全部列表（收藏保留）。')) {
+      mastered = new Set(); saveAll(); closeSheet(); setTab(tab);
+    }
   };
   const rb = div.querySelector('#reset-all');
   if (rb) rb.onclick = () => {
@@ -1040,7 +1089,7 @@ document.addEventListener('keydown', e => {
     $('installhint').style.display = 'block';
   }
   const hash = (location.hash || '').replace('#', '');
-  setTab(RENDER[hash] ? hash : 'words');
+  setTab(TABS.indexOf(hash) >= 0 ? hash : 'words');
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
