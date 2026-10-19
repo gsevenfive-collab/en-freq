@@ -131,10 +131,18 @@ footer .k{background:var(--panel2);border:1px solid var(--line);border-radius:5p
   td.ipa{order:3;margin-left:auto}
   td.ct{order:4;font-size:12px;opacity:.8}
   td:nth-child(7){order:5}
-  td.cn{order:6;flex-basis:100%;margin-top:3px;font-size:14px}
-  td.ex{order:7;flex-basis:100%;margin-top:4px;display:block}
-  td:nth-child(8){order:8;flex-basis:100%;margin-top:2px}
+  td:nth-child(8){order:6}
+  td.cn{order:7;flex-basis:100%;margin-top:3px;font-size:14px}
+  td.ex{order:8;flex-basis:100%;margin-top:4px;display:block}
   .wd{white-space:normal}
+  /* 收紧一行，保证 ☆掌握 和 ♡收藏 不换行 */
+  tbody tr{gap:3px 6px;padding:10px 11px}
+  td.rk{min-width:26px}
+  td.ct{font-size:11.5px}
+  td.ipa{font-size:12px}
+  td:nth-child(2) .spk{font-size:14px;padding:1px 5px}
+  td:nth-child(2) .spkw{font-size:12px;padding:1px 3px}
+  td:nth-child(7) .mk,td:nth-child(8) .fav{font-size:16px;padding:2px 4px}
 }
 @media(hover:none){
   button{padding:10px 14px;font-size:13.5px}
@@ -223,7 +231,7 @@ footer .k{background:var(--panel2);border:1px solid var(--line);border-radius:5p
   <span><span class="k">★</span> 收藏（自动保存）</span>
   <span><span class="k">/</span> 搜索</span>
   <span id="voiceinfo"></span>
-  <span id="buildtag" style="opacity:.55;margin-left:auto">v 2026-10-19 13:34</span>
+  <span id="buildtag" style="opacity:.55;margin-left:auto">v 2026-10-19 13:39</span>
 </footer>
 
 <script>
@@ -330,7 +338,7 @@ function render(){
       <td class="cn">${d.cn||'<span style="color:#5a6a86">待补充</span>'}</td>
       <td class="ex">${d.ex? `<i>${d.ex}</i><button class="spk spkex" data-say="${d.ex}" data-rate="0.6" title="慢速朗读例句">🐢</button><button class="spk spkex" data-say="${d.ex}" data-rate="1" title="正常语速朗读例句">🗣️</button><em>${d.excn||''}</em>` : '<span style="color:#5a6a86">—</span>'}</td>
       <td><button class="mk ${mastered.has(d.w)?'on':''}" data-mk="${d.w}" title="标记已掌握">${mastered.has(d.w)?'★':'☆'}</button></td>
-      <td><button class="fav ${favWords.has(d.w)?'on':''}" data-fav="${d.w}" title="收藏这个词">${favWords.has(d.w)?'★':'☆'}</button></td>
+      <td><button class="fav ${favWords.has(d.w)?'on':''}" data-fav="${d.w}" title="收藏这个词">${favWords.has(d.w)?'♥':'♡'}</button></td>
     </tr>`).join('');
 
   $('empty').style.display = rows.length ? 'none' : 'block';
