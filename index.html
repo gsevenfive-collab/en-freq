@@ -536,8 +536,10 @@ let speakTimer = null;
 function speak(text, rowEl, rate){
   if (!text) return;
   const r = (typeof rate === 'number' && rate > 0) ? rate : 0.9;
-  /* 单个字母单独念容易被读成「字母名」（a -> /eɪ/），补个句点让它按词读 */
-  const spoken = (/^[A-Za-z]$/.test(text) ? text + '.' : text);
+  /* 单个字母交给 TTS 会被读成「字母名」甚至「capital I」（iOS 实测）。
+     只用同音词替换这两个词，其余原样。 */
+  const SPEAK_FIX = { 'I': 'eye', 'a': 'uh' };
+  const spoken = (SPEAK_FIX[text] !== undefined && text.length === 1) ? SPEAK_FIX[text] : text;
   const u = new SpeechSynthesisUtterance(spoken);
   u.lang = 'en-US';
   u.rate = r;
@@ -986,10 +988,13 @@ function openSheet(){
       「设置 → 时间和语言 → 语音 → 添加语音」装本地英语语音。</span></div>
     <div class="kv"><span class="k">已掌握</span><span class="v">${mastered.size} 词</span></div>
     <div class="kv"><span class="k">已做题</span><span class="v">${Object.keys(quizRec).length} 道</span></div>
-    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:22</span></div>
+    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:24</span></div>
+    <div class="act">
+      <button id="voice-test">🔊 试听一句</button>
+      <button id="sheet-close">关闭</button>
+    </div>
     <div class="act">
       <button class="danger" id="reset-all">清空全部记录</button>
-      <button id="sheet-close">关闭</button>
     </div>
   </div>`;
   document.body.appendChild(div);
@@ -997,6 +1002,12 @@ function openSheet(){
   pickVoice();
   const vh = div.querySelector('#voicehint');
   if (vh && enVoice && CLOUD_VOICE.test(enVoice.name)) vh.hidden = false;
+  const vt = div.querySelector('#voice-test');
+  if (vt) vt.onclick = () => {
+    speak('Hello. I am here. This is a test.', null, 0.9);
+    vt.textContent = '正在播放…';
+    setTimeout(() => { vt.textContent = '🔊 试听一句'; }, 2200);
+  };
   const rb = div.querySelector('#reset-all');
   if (rb) rb.onclick = () => {
     if (confirm('清空所有「已掌握 / 收藏 / 做题记录」？')) {
