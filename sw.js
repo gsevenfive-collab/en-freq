@@ -1,9 +1,10 @@
 /* 英语高频词 PWA · 离线缓存 */
-const CACHE = 'en-freq-dfba9c82ac';
+const CACHE = 'en-freq-f61be66d00';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './sponsor.jpg',
   './icons/favicon-32.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
