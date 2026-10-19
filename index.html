@@ -171,6 +171,11 @@ tbody tr:active{background:rgba(91,157,255,.08)}
   border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:12px;
   word-break:break-word;letter-spacing:.1px}
 .qblank .bl{color:var(--acc);letter-spacing:2px;font-weight:700}
+.qlab{display:inline-block;font-family:-apple-system,sans-serif;font-size:10px;
+  font-weight:700;letter-spacing:.5px;color:var(--fg3);background:var(--card2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-right:8px;
+  vertical-align:2px}
+.qcn{color:#fff;font-weight:650}
 #qin{width:100%;height:48px;background:var(--bg2);border:1px solid var(--line2);
   color:var(--fg);border-radius:12px;padding:0 14px;font-size:16px;
   outline:none;transition:.16s;-webkit-appearance:none}
@@ -187,8 +192,7 @@ tbody tr:active{background:rgba(91,157,255,.08)}
 .qbtns button.fav.on{color:var(--star)}
 .hintline{margin-top:10px;font-size:12.5px;color:var(--warn);text-align:center}
 .hintline b{color:#fff;font-family:ui-monospace,monospace}
-.ans{margin-top:14px;border-top:1px dashed var(--line);padding-top:13px;
-  animation:viewIn .22s ease}
+.ans{margin-top:14px;border-top:1px dashed var(--line);padding-top:13px}
 .ans h4{margin:0 0 8px;font-size:11.5px;color:var(--fg3);font-weight:600;
   letter-spacing:.8px;text-transform:uppercase}
 .mine{color:var(--fg2);font-size:13.5px;margin-bottom:10px;
@@ -671,7 +675,7 @@ function renderBlank(){
   let body;
   if (qRevealed === null){
     body = `<input id="qin" type="text" autocomplete="off" autocapitalize="off"
-              spellcheck="false" placeholder="填出 ____ 部分（${words} 个词）" value="${esc(qLastInput)}">
+              spellcheck="false" placeholder="按上面的中文，填出 ____ 部分（${words} 个词）" value="${esc(qLastInput)}">
       <div class="qbtns">
         <button class="primary" id="submit">提交</button>
         <button id="hint">提示</button>
@@ -707,9 +711,9 @@ function renderBlank(){
       <span>第 <b>${qPos + 1}</b> / ${pool.length}</span>
       <span>${rec ? `<span class="tag ${rec.s === 'yes' ? 'ok' : 'no'}">${rec.s === 'yes' ? '上次对' : '上次错'}</span>` : ''}</span>
     </div>
-    <div class="qcn">${esc(f.pcn || '（无中文提示）')}</div>
-    <div class="qpat">${esc(f.p)}</div>
-    <div class="qblank">${esc(e.q).replace(/_{2,}/, '<b class="bl">____</b>')}</div>
+    <div class="qcn">${esc(e.cn || f.pcn || '（无中文提示）')}</div>
+    <div class="qpat"><span class="qlab">公式</span>${esc(f.p)}</div>
+    <div class="qblank"><span class="qlab">题目</span>${esc(e.q).replace(/_{2,}/, '<b class="bl">____</b>')}</div>
     ${body}
   </div>`;
 
@@ -732,12 +736,22 @@ function highlight(full, ans){
   return esc(full.slice(0, i)) + '<b class="hl">' + esc(full.slice(i, i + ans.length)) + '</b>' + esc(full.slice(i + ans.length));
 }
 
+function stripArticles(s){
+  return norm(s).replace(/^(a|an|the)\s+/, '');
+}
+
 function doSubmit(){
   const pool = blankPool();
   if (!pool.length) return;
   const key = ALL_BLANK[pool[qPos]];
+  const e = eOf(key);
   const n = norm(qLastInput);
-  const ok = !!n && fOf(key).ex.some(x => (x.a && norm(x.a) === n) || (x.en && norm(x.en) === n));
+  // 中文意思已经锁定这一句，所以只认这一条的答案；冠词 a/an/the 差异放行
+  const ok = !!n && (
+       n === norm(e.a)
+    || n === norm(e.en)
+    || stripArticles(qLastInput) === stripArticles(e.a)
+  );
   qRevealed = ok ? 'yes' : 'no';
   quizRec[key] = { s: qRevealed, at: Date.now() };
   saveAll();
@@ -935,7 +949,7 @@ function openSheet(){
     <div class="kv"><span class="k">发音</span><span class="v" id="voiceinfo">读取中…</span></div>
     <div class="kv"><span class="k">已掌握</span><span class="v">${mastered.size} 词</span></div>
     <div class="kv"><span class="k">已做题</span><span class="v">${Object.keys(quizRec).length} 道</span></div>
-    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:05</span></div>
+    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:14</span></div>
     <div class="act">
       <button class="danger" id="reset-all">清空全部记录</button>
       <button id="sheet-close">关闭</button>
