@@ -72,6 +72,8 @@ svg{display:block}
   transition:.15s;white-space:nowrap;font-weight:500}
 .chip:active{transform:scale(.95)}
 .chip.on{background:var(--acc);border-color:var(--acc);color:#06121f;font-weight:700}
+.chip.reset{color:#ffb0bc;border-color:rgba(255,107,129,.35)}
+.chip.reset:active{background:rgba(255,107,129,.15)}
 .chip .n{opacity:.75;font-size:11.5px;margin-left:3px;font-variant-numeric:tabular-nums}
 .chip.on .n{opacity:.85}
 
@@ -329,10 +331,10 @@ tbody tr:active{background:rgba(91,157,255,.08)}
              autocapitalize="off" spellcheck="false">
     </div>
     <div class="chips">
-      <button class="chip on" id="f-rich">精讲<span class="n" id="c-rich"></span></button>
-      <button class="chip" id="f-all">全部<span class="n" id="c-all"></span></button>
+      <button class="chip on" id="f-all">全部<span class="n" id="c-all"></span></button>
       <button class="chip" id="f-a">A 必背<span class="n" id="c-a"></span></button>
       <button class="chip" id="f-mastered">✓ 已掌握<span class="n" id="c-mastered"></span></button>
+      <button class="chip reset" id="f-reset">↺ 重置</button>
     </div>
     <div class="overview" id="stats"></div>
   </div>
@@ -457,7 +459,7 @@ let favForms = new Set(JSON.parse(localStorage.getItem(K_FAVF) || '[]'));
 let quizRec  = JSON.parse(localStorage.getItem(K_QUIZ) || '{}');
 
 let tab = 'words';
-let sortKey = 'r', sortAsc = true, filter = 'rich', query = '';
+let sortKey = 'r', sortAsc = true, filter = 'all', query = '';
 let lastSpoken = null, lastRate = 0.9;
 let fbFilter = 'all', fbQuery = '', openSet = new Set();
 let qFilter = 'all', qPos = 0, qRevealed = null, qLastInput = '', qHinted = false;
@@ -563,8 +565,7 @@ function visibleWords(){
   /* 选「已掌握」时只显示已掌握的；其余筛选都先把已掌握的隐去 */
   if (filter === 'mastered') rows = rows.filter(d => mastered.has(d.w));
   else rows = rows.filter(d => !mastered.has(d.w));
-  if (filter === 'rich') rows = rows.filter(d => d.ipa);
-  else if (filter === 'a') rows = rows.filter(d => d.lv === 'A');
+  if (filter === 'a') rows = rows.filter(d => d.lv === 'A');
   else if (filter === 'b') rows = rows.filter(d => d.lv === 'B');
   else if (filter === 'c') rows = rows.filter(d => d.lv === 'C');
   if (query){
@@ -596,8 +597,6 @@ function renderWords(){
     </tr>`).join('');
   $('empty').hidden = rows.length > 0;
 
-  const richN = DATA.filter(d => d.ipa).length;
-  $('c-rich').textContent = richN;
   $('c-all').textContent = DATA.length;
   $('c-a').textContent = DATA.filter(d => d.lv === 'A').length;
   $('c-mastered').textContent = mastered.size;
@@ -918,7 +917,7 @@ document.addEventListener('click', e => {
 });
 
 /* 单词筛选 */
-const FILTERS = { 'f-rich':'rich', 'f-all':'all', 'f-a':'a', 'f-mastered':'mastered' };
+const FILTERS = { 'f-all':'all', 'f-a':'a', 'f-mastered':'mastered' };
 Object.keys(FILTERS).forEach(id => {
   const el = $(id);
   if (el) el.onclick = () => {
@@ -932,6 +931,18 @@ Object.keys(FILTERS).forEach(id => {
   };
 });
 $('q').addEventListener('input', ev => { query = ev.target.value; renderWords(); });
+
+/* 重置：清空已掌握，回到全部列表 */
+$('f-reset').onclick = () => {
+  if (!mastered.size){ return; }
+  if (confirm('重置进度？已掌握的 ' + mastered.size + ' 个词会回到「全部」列表（收藏保留）。')) {
+    mastered = new Set(); saveAll();
+    filter = 'all';
+    document.querySelectorAll('#ctl-words .chip').forEach(b => b.classList.remove('on'));
+    $('f-all').classList.add('on');
+    renderWords();
+  }
+};
 
 /* 公式筛选 */
 $('fb-all').onclick = () => {
@@ -991,7 +1002,7 @@ function openSheet(){
       「设置 → 时间和语言 → 语音 → 添加语音」装本地英语语音。</span></div>
     <div class="kv"><span class="k">已掌握</span><span class="v">${mastered.size} 词</span></div>
     <div class="kv"><span class="k">已做题</span><span class="v">${Object.keys(quizRec).length} 道</span></div>
-    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 14:58</span></div>
+    <div class="kv"><span class="k">版本</span><span class="v">v 2026-10-19 15:03</span></div>
     <div class="act">
       <button id="voice-test">🔊 试听一句</button>
       <button id="sheet-close">关闭</button>
